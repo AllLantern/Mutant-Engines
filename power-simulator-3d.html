@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>X-SIM 3D — POWER SIMULATOR</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@400;600;700&display=swap');
+  :root{--p:#c040ff;--e:#f59e0b;--el:#22c55e;--k:#ef4444;--ph:#94a3b8;--ps:#a855f7;--sp:#3b82f6;--my:#c084fc;--co:#fde68a;--te:#38bdf8;--dk:#6366f1;--bg:#08080c}
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-user-select:none;user-select:none}
+  html,body{overflow:hidden;background:#000;width:100%;height:100%;font-family:'Rajdhani',sans-serif}
+  canvas#C{display:block;position:fixed;inset:0;z-index:1}
+  .ov{position:fixed;inset:0;z-index:10;pointer-events:none}
+  .vig{position:absolute;inset:0;background:radial-gradient(ellipse at center,transparent 40%,rgba(0,0,0,.45) 70%,rgba(0,0,0,.8) 100%)}
+  .scan{position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent 0,transparent 3px,rgba(0,0,0,.012) 3px,rgba(0,0,0,.012) 6px);opacity:.2}
+
+  /* HUD */
+  .hud{position:fixed;z-index:100;pointer-events:none}
+  .ht{top:8px;left:12px;right:12px;display:flex;justify-content:space-between}
+  .logo{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:8px;background:linear-gradient(135deg,var(--p),var(--e));-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 8px rgba(192,64,255,.25))}
+  .logo-s{font-size:7px;letter-spacing:3px;color:rgba(180,140,200,.3)}
+  .htr{text-align:right;font-size:7px;letter-spacing:2px;color:rgba(180,160,160,.3);line-height:1.8}
+  .tel{font-size:7px;letter-spacing:1.5px;color:rgba(160,140,140,.2);line-height:2;position:fixed;z-index:100;pointer-events:none}
+  .tl{top:62px;left:10px}.tr{top:62px;right:10px;text-align:right}
+
+  /* Power bar */
+  .pw{position:fixed;bottom:66px;left:50%;transform:translateX(-50%);width:280px;z-index:100;pointer-events:none}
+  .pw-b{width:100%;height:2px;background:rgba(255,255,255,.02);border-radius:1px;overflow:hidden}
+  .pw-f{height:100%;width:0%;border-radius:1px;background:var(--p);box-shadow:0 0 6px currentColor;transition:width .06s}
+  .pw-m{display:flex;justify-content:space-between;margin-top:2px;font-size:6px;letter-spacing:2px;color:rgba(160,130,130,.2)}
+  .pw-m .v{font-family:'Bebas Neue',sans-serif;font-size:9px;color:rgba(180,140,200,.4)}
+
+  /* Category tabs */
+  .cats{position:fixed;bottom:10px;left:50%;transform:translateX(-50%);display:flex;gap:2px;z-index:200;flex-wrap:wrap;justify-content:center;max-width:95vw}
+  .cat{height:30px;padding:0 8px;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:9px;letter-spacing:2px;border:1px solid rgba(100,90,100,.12);background:rgba(10,10,14,.6);color:rgba(160,140,160,.3);cursor:pointer;transition:all .15s;backdrop-filter:blur(3px);pointer-events:auto;white-space:nowrap}
+  .cat.on{color:#fff;border-color:var(--bc);box-shadow:0 0 12px rgba(var(--r),var(--g2),var(--b2),.15)}
+  .cat .ic{margin-right:4px}
+
+  /* Power selector */
+  .psel{position:fixed;left:10px;top:50%;transform:translateY(-50%);z-index:200;pointer-events:auto;display:flex;flex-direction:column;gap:3px;max-height:70vh;overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(192,64,255,.2) transparent;padding:4px}
+  .psel::-webkit-scrollbar{width:3px}
+  .psel::-webkit-scrollbar-thumb{background:rgba(192,64,255,.2);border-radius:2px}
+  .pbtn{padding:4px 8px;font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:600;letter-spacing:1px;border:1px solid rgba(100,90,100,.15);background:rgba(10,10,14,.7);color:rgba(160,140,160,.4);cursor:pointer;transition:all .12s;backdrop-filter:blur(3px);text-align:left;line-height:1.2}
+  .pbtn:hover{border-color:rgba(192,64,255,.3);color:rgba(200,180,200,.6)}
+  .pbtn.on{color:#fff;border-color:var(--pc);box-shadow:0 0 8px color-mix(in srgb,var(--pc) 30%,transparent)}
+  .pbtn .pn{font-family:'Bebas Neue',sans-serif;font-size:11px;letter-spacing:1.5px}
+  .pbtn .pc{font-size:7px;opacity:.5}
+
+  /* Combo flash */
+  .combo-flash{position:fixed;top:35%;left:50%;transform:translate(-50%,-50%);z-index:300;pointer-events:none;text-align:center;opacity:0;transition:opacity .3s}
+  .combo-flash.show{opacity:1}
+  .combo-flash .cn{font-family:'Bebas Neue',sans-serif;font-size:36px;letter-spacing:5px;background:linear-gradient(90deg,var(--p),var(--e),var(--p));background-size:300% 100%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:sh 2s linear infinite;filter:drop-shadow(0 0 15px rgba(192,64,255,.4))}
+  .combo-flash .cd{font-size:10px;letter-spacing:2px;color:rgba(255,200,100,.5)}
+  @keyframes sh{0%{background-position:0% 50%}100%{background-position:300% 50%}}
+
+  /* Action text */
+  .at{position:fixed;z-index:150;pointer-events:none;font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:4px;opacity:0;transition:opacity .12s,transform .12s;transform:translate(-50%,-60%) scale(.8);background:linear-gradient(90deg,var(--p),var(--e));-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 10px rgba(192,64,255,.3))}
+  .at.show{opacity:1;transform:translate(-50%,-60%) scale(1)}
+
+  /* Object info */
+  .sel-info{position:fixed;bottom:100px;right:14px;z-index:200;pointer-events:none;text-align:right;opacity:0;transition:opacity .2s}
+  .sel-info.show{opacity:1}
+  .sel-name{font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:3px;color:var(--p)}
+  .sel-det{font-size:7px;letter-spacing:1.5px;color:rgba(192,64,255,.35);line-height:1.6}
+
+  /* Sound toggle */
+  .snd{position:fixed;top:6px;right:8px;z-index:200;pointer-events:auto;font-family:'Rajdhani',sans-serif;font-weight:600;font-size:7px;letter-spacing:2px;color:rgba(160,140,140,.25);background:rgba(10,10,14,.3);border:1px solid rgba(100,90,100,.08);padding:2px 7px;cursor:pointer}
+
+  /* Hint */
+  .hint{position:fixed;bottom:50px;left:50%;transform:translateX(-50%);z-index:300;pointer-events:none;font-size:8px;letter-spacing:2px;color:rgba(180,160,150,.4);text-align:center;opacity:1;transition:opacity 2s}
+  .hint.gone{opacity:0}
+
+  /* Loading */
+  #LD{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity 1s}
+  #LD.go{opacity:0;pointer-events:none}
+  .ld-t{font-family:'Bebas Neue',sans-serif;font-size:40px;letter-spacing:12px;background:linear-gradient(135deg,var(--p),var(--e));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+  .ld-s{margin-top:10px;font-size:8px;letter-spacing:5px;color:rgba(180,140,200,.2);animation:pls 1.5s ease-in-out infinite}
+  .ld-b{margin-top:18px;width:140px;height:2px;background:rgba(192,64,255,.04);border-radius:1px;overflow:hidden}
+  .ld-f{width:0%;height:100%;background:linear-gradient(90deg,var(--p),var(--e));animation:ldf 2s ease-in-out forwards}
+  @keyframes pls{0%,100%{opacity:.2}50%{opacity:.6}}
+  @keyframes ldf{to{width:100%}}
+</style>
+</head>
+<body>
+<div id="LD"><div class="ld-t">X-SIM 3D</div><div class="ld-s">POWER SIMULATOR ENGINE</div><div class="ld-b"><div class="ld-f"></div></div></div>
+<div class="ov"><div class="vig"></div><div class="scan"></div></div>
+
+<div class="hud ht"><div><div class="logo">X-SIM 3D</div><div class="logo-s">POWER SIMULATOR — V1.0</div></div><div class="htr"><div id="FPS">60 FPS</div><div id="OBJS">OBJ: 0</div></div></div>
+<div class="tel tl"><div id="tP">POWER: —</div><div id="tC">CHAR: —</div><div id="tCat">CAT: —</div><div id="tD">DMG: 0</div><div id="tCombo">COMBOS: 0</div></div>
+<div class="tel tr"><div id="tM">MODE: CLICK</div><div id="tE">ENERGY: 100%</div><div id="tH">HITS: 0</div><div id="tS">STYLE: 0</div></div>
+
+<div class="sel-info" id="SI"><div class="sel-name" id="SN"></div><div class="sel-det" id="SD"></div></div>
+<div class="combo-flash" id="CF"><div class="cn" id="CFN"></div><div class="cd" id="CFD"></div></div>
+<div class="at" id="AT"></div>
+
+<div class="pw"><div class="pw-b"><div class="pw-f" id="PF"></div></div><div class="pw-m"><span>POWER INTENSITY</span><span class="v" id="PV">0%</span></div></div>
+
+<div class="psel" id="PSEL"></div>
+
+<div class="cats" id="CATS"></div>
+
+<div class="hint" id="HI">CLICK to fire · DRAG objects · SCROLL to zoom · RIGHT-DRAG to orbit · 1-0 categories</div>
+<button class="snd" id="SB" onclick="toggleSound()">♪ OFF</button>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(()=>{
+'use strict';
+const H=THREE;
+
+// ═══════════════════════════════════════
+// §1 POWER DATA
+// ═══════════════════════════════════════
+const POWERS=[
+// Energy
+{id:"optic_blast",name:"Optic Blast",char:"Cyclops",icon:"👁️",cat:"Energy",color:"#dc2626",desc:"Ruby-red concussive beam",mode:"click",dmg:35},
+{id:"kinetic_charge",name:"Kinetic Charge",char:"Gambit",icon:"🃏",cat:"Energy",color:"#d946ef",desc:"Hold to charge, release to detonate",mode:"hold",dmg:30},
+{id:"plasma_rings",name:"Plasma Rings",char:"Havok",icon:"💠",cat:"Energy",color:"#60a5fa",desc:"Concentric plasma discharge",mode:"click",dmg:30},
+{id:"heat_vision",name:"Heat Vision",char:"Superman",icon:"🔴",cat:"Energy",color:"#ef4444",desc:"Dual heat beams from eyes",mode:"click",dmg:40},
+{id:"photon_blast",name:"Photon Blast",char:"Captain Marvel",icon:"⭐",cat:"Energy",color:"#fbbf24",desc:"Golden photon energy wave",mode:"click",dmg:35},
+{id:"omega_beam",name:"Omega Beams",char:"Darkseid",icon:"Ω",cat:"Energy",color:"#dc2626",desc:"Homing zigzag beams",mode:"click",dmg:50},
+{id:"power_cosmic",name:"Power Cosmic",char:"Silver Surfer",icon:"🏄",cat:"Energy",color:"#c4b5fd",desc:"Cosmic energy nova",mode:"click",dmg:40},
+// Elemental
+{id:"weather",name:"Weather",char:"Storm",icon:"🌩️",cat:"Elemental",color:"#93c5fd",desc:"Hold to build storm",mode:"hold",dmg:30},
+{id:"cryokinesis",name:"Cryokinesis",char:"Iceman",icon:"❄️",cat:"Elemental",color:"#67e8f9",desc:"Freeze objects",mode:"click",dmg:10},
+{id:"pyrokinesis",name:"Pyrokinesis",char:"Pyro",icon:"🔥",cat:"Elemental",color:"#fb923c",desc:"Ignite & control fire",mode:"click",dmg:20},
+{id:"magma",name:"Magma Flow",char:"Magma",icon:"🌋",cat:"Elemental",color:"#ef4444",desc:"Lava eruption from ground",mode:"click",dmg:25},
+{id:"lightning_summon",name:"Lightning",char:"Shazam",icon:"⚡",cat:"Elemental",color:"#fbbf24",desc:"Call down the lightning!",mode:"click",dmg:35},
+{id:"hellfire",name:"Hellfire",char:"Ghost Rider",icon:"💀",cat:"Elemental",color:"#f97316",desc:"Supernatural fire ignores armor",mode:"click",dmg:30},
+// Kinetic
+{id:"telekinesis",name:"Telekinesis",char:"Jean Grey",icon:"🧠",cat:"Kinetic",color:"#fbbf24",desc:"Lift & throw any object",mode:"drag",dmg:10},
+{id:"magnetism",name:"Magnetism",char:"Magneto",icon:"🧲",cat:"Kinetic",color:"#a855f7",desc:"Control metal + field lines",mode:"drag",dmg:15},
+{id:"super_strength",name:"Super Strength",char:"Colossus",icon:"💪",cat:"Kinetic",color:"#94a3b8",desc:"Fling with massive force",mode:"drag",dmg:25},
+{id:"thunder_clap",name:"Thunder Clap",char:"Hulk",icon:"👏",cat:"Kinetic",color:"#86efac",desc:"Massive shockwave AOE",mode:"click",dmg:40},
+{id:"mjolnir",name:"Mjolnir",char:"Thor",icon:"🔨",cat:"Kinetic",color:"#60a5fa",desc:"Hammer strike + lightning",mode:"click",dmg:40},
+{id:"vibranium_pulse",name:"Vibranium Pulse",char:"Black Panther",icon:"🐾",cat:"Kinetic",color:"#a855f7",desc:"Stored kinetic release",mode:"click",dmg:35},
+// Physical
+{id:"claws",name:"Adamantium Claws",char:"Wolverine",icon:"🐺",cat:"Physical",color:"#e5e7eb",desc:"Slash objects apart",mode:"click",dmg:45},
+{id:"hulk_smash",name:"Hulk Smash",char:"Hulk",icon:"👊",cat:"Physical",color:"#22c55e",desc:"Ground pound destruction",mode:"click",dmg:50},
+{id:"web_shot",name:"Web-Slinging",char:"Spider-Man",icon:"🕷️",cat:"Physical",color:"#e5e7eb",desc:"Web restraint on objects",mode:"click",dmg:10},
+{id:"symbiote",name:"Symbiote",char:"Venom",icon:"🖤",cat:"Physical",color:"#1e1b4b",desc:"Tendrils grab + corrupt",mode:"click",dmg:30},
+{id:"martial_arts",name:"Martial Arts",char:"Shang-Chi",icon:"🥋",cat:"Physical",color:"#f59e0b",desc:"Rapid multi-hit combo",mode:"click",dmg:40},
+// Psychic
+{id:"psi_blade",name:"Psychic Blade",char:"Psylocke",icon:"🔮",cat:"Psychic",color:"#e879f9",desc:"Pink-purple psi-slash",mode:"click",dmg:35},
+{id:"phoenix",name:"Phoenix Force",char:"Phoenix",icon:"🦅",cat:"Psychic",color:"#f59e0b",desc:"Escalates with repeated use!",mode:"click",dmg:30},
+{id:"hex_bolt",name:"Hex Bolts",char:"Scarlet Witch",icon:"🔴",cat:"Psychic",color:"#dc2626",desc:"Creates reality warp zones",mode:"click",dmg:20},
+{id:"penance_stare",name:"Penance Stare",char:"Ghost Rider",icon:"💀",cat:"Psychic",color:"#f97316",desc:"Massive single-target damage",mode:"click",dmg:60},
+// Spatial
+{id:"teleport",name:"Teleportation",char:"Nightcrawler",icon:"💨",cat:"Spatial",color:"#6366f1",desc:"BAMF! Leaves toxic smoke",mode:"click",dmg:10},
+{id:"super_speed",name:"Super Speed",char:"Quicksilver",icon:"⚡",cat:"Spatial",color:"#e5e7eb",desc:"Trail of afterimages",mode:"click",dmg:15},
+{id:"time_slow",name:"Time Slow",char:"Tempo",icon:"⏳",cat:"Spatial",color:"#a78bfa",desc:"Hold to slow time",mode:"hold",dmg:0},
+{id:"gravity",name:"Gravity Well",char:"Exodus",icon:"⬇️",cat:"Spatial",color:"#dc2626",desc:"Pull objects to point",mode:"hold",dmg:10},
+{id:"blink_slash",name:"Blink Slash",char:"Blink",icon:"🔪",cat:"Spatial",color:"#ec4899",desc:"Portal slices through objects",mode:"click",dmg:35},
+// Mystic
+{id:"chaos_magic",name:"Chaos Magic",char:"Scarlet Witch",icon:"❌",cat:"Mystic",color:"#dc2626",desc:"Reality rewrite — anything goes",mode:"click",dmg:30},
+{id:"mystic_shield",name:"Mystic Shield",char:"Dr. Strange",icon:"🛡️",cat:"Mystic",color:"#f59e0b",desc:"Mandala barrier + reflect",mode:"click",dmg:10},
+{id:"hellfire_chains",name:"Hellfire Chains",char:"Ghost Rider",icon:"⛓️",cat:"Mystic",color:"#f97316",desc:"Burning chains restrain + damage",mode:"click",dmg:30},
+{id:"eldritch_blast",name:"Eldritch Blast",char:"Dormammu",icon:"🌑",cat:"Mystic",color:"#7c3aed",desc:"Dark dimension energy beam",mode:"click",dmg:40},
+// Cosmic
+{id:"infinity_snap",name:"Infinity Snap",char:"Thanos",icon:"🫰",cat:"Cosmic",color:"#c084fc",desc:"Random half of objects destroyed",mode:"click",dmg:999},
+{id:"nova_force",name:"Nova Force",char:"Nova",icon:"💫",cat:"Cosmic",color:"#fbbf24",desc:"Golden energy burst",mode:"click",dmg:35},
+{id:"celestial_beam",name:"Celestial Beam",char:"Celestials",icon:"👁️",cat:"Cosmic",color:"#fde68a",desc:"Massive cosmic judgment beam",mode:"click",dmg:60},
+// Tech
+{id:"repulsor",name:"Repulsor Beam",char:"Iron Man",icon:"🤖",cat:"Tech",color:"#38bdf8",desc:"Tech energy beam",mode:"click",dmg:30},
+{id:"batarang",name:"Batarang",char:"Batman",icon:"🦇",cat:"Tech",color:"#6b7280",desc:"Bouncing precision projectile",mode:"click",dmg:20},
+{id:"nano_swarm",name:"Nano Swarm",char:"Iron Man",icon:"🔬",cat:"Tech",color:"#ef4444",desc:"Nanobots dissolve + rebuild",mode:"click",dmg:20},
+// Dark
+{id:"shadow_form",name:"Shadow Form",char:"Obsidian",icon:"🌑",cat:"Dark",color:"#1e1b4b",desc:"Darkness zone saps energy",mode:"click",dmg:15},
+{id:"soul_self",name:"Soul Self",char:"Raven",icon:"🐦‍⬛",cat:"Dark",color:"#6366f1",desc:"Shadow raven attacks",mode:"click",dmg:30},
+{id:"void_touch",name:"Void Touch",char:"Sentry",icon:"⚫",cat:"Dark",color:"#fbbf24",desc:"Anti-matter disintegration",mode:"click",dmg:45},
+{id:"darkforce",name:"Darkforce",char:"Darkstar",icon:"✨",cat:"Dark",color:"#7c3aed",desc:"Dark dimension energy blast",mode:"click",dmg:30}
+];
+
+const CATEGORIES=["Energy","Elemental","Kinetic","Physical","Psychic","Spatial","Mystic","Cosmic","Tech","Dark"];
+const CAT_COLORS={Energy:"#f59e0b",Elemental:"#22c55e",Kinetic:"#ef4444",Physical:"#94a3b8",Psychic:"#a855f7",Spatial:"#3b82f6",Mystic:"#c084fc",Cosmic:"#fde68a",Tech:"#38bdf8",Dark:"#6366f1"};
+const CAT_ICONS={Energy:"⚡",Elemental:"🌍",Kinetic:"💥",Physical:"🦾",Psychic:"🧠",Spatial:"🌀",Mystic:"✨",Cosmic:"🌌",Tech:"🔧",Dark:"🌑"};
+
+const COMBOS=[
+{a:"kinetic_charge",b:"claws",name:"Charged Claws",desc:"Explosive slashing",color:"#d946ef",dmg:70},
+{a:"pyrokinesis",b:"telekinesis",name:"Fire Tornado",desc:"Flaming vortex",color:"#f97316",dmg:55},
+{a:"cryokinesis",b:"weather",name:"Blizzard",desc:"Ice storm barrage",color:"#67e8f9",dmg:50},
+{a:"optic_blast",b:"heat_vision",name:"Twin Beams",desc:"Dual devastation",color:"#dc2626",dmg:60},
+{a:"magnetism",b:"super_strength",name:"Magnetic Railgun",desc:"Launch metal at speed",color:"#a855f7",dmg:65},
+{a:"phoenix",b:"telekinesis",name:"Phoenix Storm",desc:"Golden destruction wave",color:"#f59e0b",dmg:80},
+{a:"hex_bolt",b:"chaos_magic",name:"Chaos Cascade",desc:"Everything goes haywire",color:"#dc2626",dmg:55},
+{a:"hulk_smash",b:"thunder_clap",name:"World Breaker",desc:"Absolute destruction",color:"#22c55e",dmg:90},
+{a:"mystic_shield",b:"chaos_magic",name:"Nexus Event",desc:"Reality collapses",color:"#dc2626",dmg:70},
+{a:"hellfire",b:"hellfire_chains",name:"Spirit of Vengeance",desc:"Full Ghost Rider mode",color:"#f97316",dmg:70},
+{a:"repulsor",b:"nano_swarm",name:"Full Arsenal",desc:"Iron Man at maximum",color:"#ef4444",dmg:60},
+{a:"symbiote",b:"void_touch",name:"Maximum Carnage",desc:"Symbiote explosion",color:"#dc2626",dmg:75},
+{a:"omega_beam",b:"celestial_beam",name:"Cosmic Judgment",desc:"Universal reset",color:"#fde68a",dmg:999},
+{a:"soul_self",b:"psi_blade",name:"Azarath Metrion",desc:"Raven unleashed",color:"#6366f1",dmg:65},
+{a:"mjolnir",b:"lightning_summon",name:"Thunder God",desc:"Divine lightning storm",color:"#fbbf24",dmg:75},
+{a:"web_shot",b:"symbiote",name:"Web of Shadows",desc:"Dark web trap",color:"#1e1b4b",dmg:55}
+];
+
+const MATERIALS=["metal","wood","glass","stone","water","organic","energy","explosive"];
+const MAT_COLORS={metal:0x8b9daf,wood:0xa0845e,glass:0xc2e0f4,stone:0x8a8279,water:0x4facd4,organic:0x6db86d,energy:0xe8c44a,explosive:0xd95050};
+const MAT_HP={metal:150,wood:80,glass:40,stone:200,water:60,organic:70,energy:120,explosive:50};
+
+// ═══════════════════════════════════════
+// §2 STATE
+// ═══════════════════════════════════════
+const mouse={x:0,y:0},ndc=new H.Vector2(),rc=new H.Raycaster();
+let curPower=POWERS[0],curCat="Energy",prevPower=null;
+let energy=100,hits=0,combo=0,style=0,camSh=0;
+let isDown=false,holdStart=0,pow=0;
+let fps=60,fc=0,fT=performance.now();
+let selected=null,dragging=null,dragPlane=new H.Plane();
+let camTheta=Math.PI*.25,camPhi=Math.PI*.38,camDist=28;
+const camTgt=new H.Vector3(0,-2,0);
+let comboTimer=0,comboName='',comboDesc='';
+let actionText='',actionTimer=0;
+let discoveredCombos=new Set();
+let phoenixLevel=1,phoenixLast=0;
+const GND=-6.5;
+
+// Reusable vectors
+const _v1=new H.Vector3(),_v2=new H.Vector3(),_v3=new H.Vector3();
+const _tmpC=new H.Color();
+
+// ═══════════════════════════════════════
+// §3 AUDIO
+// ═══════════════════════════════════════
+let ax=null,sOn=false;
+function initA(){if(ax)return;ax=new(window.AudioContext||window.webkitAudioContext)()}
+function sfx(fr,dur,vol,tp){
+  if(!sOn||!ax)return;const t=ax.currentTime,o=ax.createOscillator();
+  o.type=tp||'sine';o.frequency.setValueAtTime(fr,t);o.frequency.exponentialRampToValueAtTime(Math.max(fr*.1,20),t+dur);
+  const g=ax.createGain();g.gain.setValueAtTime(Math.min(vol,.3),t);g.gain.exponentialRampToValueAtTime(.001,t+dur);
+  o.connect(g);g.connect(ax.destination);o.start(t);o.stop(t+dur)
+}
+function sfxHit(i){sfx(120+i*40,.3,Math.min(i*.12,.25))}
+function sfxBlast(){sfx(200,.4,.2,'sawtooth');sfx(80,.5,.15)}
+function sfxZap(){sfx(800,.15,.12,'square');sfx(400,.1,.08)}
+function sfxBoom(){
+  if(!sOn||!ax)return;const t=ax.currentTime,b=ax.createBuffer(1,ax.sampleRate*.5,ax.sampleRate),d=b.getChannelData(0);
+  for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*Math.exp(-i/(ax.sampleRate*.06));
+  const s=ax.createBufferSource();s.buffer=b;const g=ax.createGain();g.gain.setValueAtTime(.2,t);g.gain.exponentialRampToValueAtTime(.001,t+.5);
+  s.connect(g);g.connect(ax.destination);s.start(t)
+}
+window.toggleSound=function(){sOn=!sOn;document.getElementById('SB').textContent='♪ '+(sOn?'ON':'OFF');if(sOn)initA()};
+
+// ═══════════════════════════════════════
+// §4 SCENE SETUP
+// ═══════════════════════════════════════
+const scene=new H.Scene();
+scene.fog=new H.FogExp2(0x1a1510,.005);
+scene.background=new H.Color(0x0a0a0e);
+const cam=new H.PerspectiveCamera(64,innerWidth/innerHeight,.1,500);
+const ren=new H.WebGLRenderer({antialias:true,canvas:document.createElement('canvas')});
+ren.setSize(innerWidth,innerHeight);ren.setPixelRatio(Math.min(devicePixelRatio,2));
+ren.shadowMap.enabled=true;ren.shadowMap.type=H.PCFSoftShadowMap;
+ren.toneMapping=H.ACESFilmicToneMapping;ren.toneMappingExposure=.6;ren.outputEncoding=H.sRGBEncoding;
+ren.domElement.id='C';document.body.prepend(ren.domElement);
+
+// Lighting
+scene.add(new H.AmbientLight(0x1a1a2e,.3));
+const moon=new H.DirectionalLight(0x8899bb,1.0);moon.position.set(-5,20,10);moon.castShadow=true;moon.shadow.mapSize.set(1024,1024);scene.add(moon);
+const warm1=new H.PointLight(0xff6622,1.5,30);warm1.position.set(-10,-4,-8);scene.add(warm1);
+const warm2=new H.PointLight(0xff6622,1.2,25);warm2.position.set(12,-4,5);scene.add(warm2);
+const cool1=new H.PointLight(0x334466,.5,60);cool1.position.set(20,8,-15);scene.add(cool1);
+const powerLight=new H.PointLight(0xc040ff,0,25);scene.add(powerLight);
+
+// Sky
+scene.add(new H.Mesh(new H.SphereGeometry(200,32,32),new H.ShaderMaterial({side:H.BackSide,
+vertexShader:`varying vec3 vP;void main(){vP=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
+fragmentShader:`varying vec3 vP;void main(){
+  float y=normalize(vP).y;
+  vec3 ground=vec3(.08,.04,.02);vec3 horizon=vec3(.15,.06,.02);vec3 mid=vec3(.04,.04,.08);vec3 top=vec3(.01,.01,.04);
+  vec3 c=mix(ground,horizon,smoothstep(-.05,.05,y));c=mix(c,mid,smoothstep(.05,.25,y));c=mix(c,top,smoothstep(.25,.7,y));
+  float hGlow=exp(-abs(y-.02)*12.)*.2;c+=vec3(.4,.12,.02)*hGlow;
+  float s=step(.998,fract(sin(dot(floor(vP.xz*2.),vec2(12.9898,78.233)))*43758.5453));
+  c+=vec3(.8,.85,1.)*s*smoothstep(.3,.6,y)*.4;
+  gl_FragColor=vec4(c,1.);}`
+})));
+
+// Ground
+const gndMat=new H.MeshStandardMaterial({color:0x1a1a1e,roughness:.92,metalness:.05});
+const gnd=new H.Mesh(new H.PlaneGeometry(200,200),gndMat);
+gnd.rotation.x=-Math.PI/2;gnd.position.y=GND;gnd.receiveShadow=true;gnd.name='ground';scene.add(gnd);
+const grid=new H.GridHelper(100,40,0x151518,0x0e0e12);grid.position.y=GND+.03;scene.add(grid);
+
+// ═══════════════════════════════════════
+// §5 OBJECTS
+// ═══════════════════════════════════════
+function Mt(c,r,m){return new H.MeshStandardMaterial({color:c,roughness:r??0.3,metalness:m??0.8,emissive:new H.Color(0)})}
+
+const objs=[];
+function mkObj(mesh,mass,name,matType){
+  mesh.castShadow=true;mesh.receiveShadow=true;
+  if(!mesh.parent)scene.add(mesh);
+  const o={mesh,vel:new H.Vector3(),angV:new H.Vector3((Math.random()-.5)*.002,(Math.random()-.5)*.002,(Math.random()-.5)*.002),
+    mass,name:name||'DEBRIS',matType:matType||'metal',held:false,dead:false,hp:MAT_HP[matType||'metal'],maxHp:MAT_HP[matType||'metal'],
+    statuses:[],dmgFlash:0};
+  objs.push(o);return o
+}
+
+// Create scene objects
+function spawnObjects(){
+  // Metal crates
+  for(let i=0;i<4;i++){
+    const s=1+Math.random()*.8;
+    const m=new H.Mesh(new H.BoxGeometry(s,s,s),Mt(MAT_COLORS.metal,.2,.95));
+    m.position.set(-8+i*4,GND+s/2+.01,(Math.random()-.5)*6);
+    mkObj(m,s*3,'METAL CRATE','metal');
+  }
+  // Stone blocks
+  for(let i=0;i<3;i++){
+    const s=.8+Math.random()*1.2;
+    const m=new H.Mesh(new H.DodecahedronGeometry(s),Mt(MAT_COLORS.stone,.85,.08));
+    m.position.set(-4+i*5,GND+s+.01,-6+Math.random()*3);
+    mkObj(m,s*5,'BOULDER','stone');
+  }
+  // Wood planks
+  for(let i=0;i<3;i++){
+    const m=new H.Mesh(new H.BoxGeometry(.6,2.5,.4),Mt(MAT_COLORS.wood,.8,.05));
+    m.position.set(6+i*2,GND+1.25+.01,4+Math.random()*2);m.rotation.z=(Math.random()-.5)*.3;
+    mkObj(m,1.5,'WOOD PLANK','wood');
+  }
+  // Glass orbs
+  for(let i=0;i<3;i++){
+    const m=new H.Mesh(new H.SphereGeometry(.6,16,16),new H.MeshPhysicalMaterial({color:MAT_COLORS.glass,roughness:.05,metalness:.1,transmission:.6,transparent:true,opacity:.5}));
+    m.position.set(-2+i*3,GND+.6+.01,8);
+    mkObj(m,.8,'GLASS ORB','glass');
+  }
+  // Explosive barrels
+  for(let i=0;i<2;i++){
+    const m=new H.Mesh(new H.CylinderGeometry(.5,.5,1.2,8),Mt(MAT_COLORS.explosive,.6,.3));
+    m.position.set(10+i*3,GND+.6+.01,-4);
+    mkObj(m,2,'BARREL','explosive');
+  }
+  // Energy crystals
+  for(let i=0;i<2;i++){
+    const mat=new H.MeshStandardMaterial({color:MAT_COLORS.energy,roughness:.1,metalness:.5,emissive:new H.Color(0xe8c44a),emissiveIntensity:.3});
+    const m=new H.Mesh(new H.OctahedronGeometry(.7),mat);
+    m.position.set(-10+i*4,GND+.7+.01,2+i*2);m.rotation.y=Math.random()*Math.PI;
+    mkObj(m,1,'ENERGY CRYSTAL','energy');
+  }
+  // Water blobs
+  for(let i=0;i<2;i++){
+    const m=new H.Mesh(new H.SphereGeometry(.8,12,12),new H.MeshPhysicalMaterial({color:MAT_COLORS.water,roughness:.05,metalness:.05,transmission:.3,transparent:true,opacity:.6}));
+    m.position.set(3+i*4,GND+.8+.01,-8);
+    mkObj(m,1.2,'WATER BLOB','water');
+  }
+  // Organic
+  for(let i=0;i<2;i++){
+    const m=new H.Mesh(new H.SphereGeometry(.6,8,6),Mt(MAT_COLORS.organic,.7,.1));
+    m.position.set(-6+i*12,GND+.6+.01,6);
+    mkObj(m,1,'ORGANIC MASS','organic');
+  }
+}
+spawnObjects();
+
+// Buildings (background)
+const concMat=Mt(0x2a2830,.88,.08);
+function bldg(x,z,w,h,d){
+  const g=new H.Group();
+  g.add(new H.Mesh(new H.BoxGeometry(w,h,d),concMat));
+  g.children[0].position.y=h/2-7;
+  // Windows
+  const winLit=new H.MeshBasicMaterial({color:0xffaa55,transparent:true,opacity:.1});
+  const winDk=new H.MeshBasicMaterial({color:0x1a1815,transparent:true,opacity:.05});
+  const rows=Math.floor(h/3),cols=Math.floor(w/2.5);
+  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
+    if(Math.random()<.4)continue;
+    const wm=new H.Mesh(new H.PlaneGeometry(.5,.7),Math.random()>.85?winLit:winDk);
+    wm.position.set(-w/2+1.5+c*2.5,h/2-7-1.5-r*3,d/2+.02);
+    g.add(wm);
+  }
+  g.traverse(c=>{if(c.isMesh){c.castShadow=true;c.receiveShadow=true}});
+  g.position.set(x,0,z);scene.add(g);
+}
+bldg(-40,-40,10,35,8);bldg(-20,-45,12,50,10);bldg(0,-42,8,28,8);bldg(20,-44,11,42,9);bldg(40,-38,9,32,8);
+bldg(-30,-20,8,20,7);bldg(28,-22,9,18,7);bldg(-32,15,8,15,7);bldg(30,12,10,22,8);
+
+// Rubble
+for(let i=0;i<25;i++){
+  const s=.15+Math.random()*.5;
+  const m=new H.Mesh(Math.random()>.5?new H.DodecahedronGeometry(s):new H.BoxGeometry(s,s*.3,s*.5),Mt(0x1e1a18,.85,.08));
+  m.position.set((Math.random()-.5)*30,GND+Math.random()*.1,(Math.random()-.5)*25);
+  m.rotation.set(Math.random()*.2,Math.random()*Math.PI,Math.random()*.15);m.receiveShadow=true;scene.add(m);
+}
+
+// ═══════════════════════════════════════
+// §6 PARTICLES
+// ═══════════════════════════════════════
+const particles=[];
+const MAX_PARTICLES=1500;
+const sparkGeo=new H.SphereGeometry(.04,4,4);
+
+function spawnParticles(pos,count,color,speed,life){
+  const c=new H.Color(color);
+  for(let i=0;i<count&&particles.length<MAX_PARTICLES;i++){
+    const mat=new H.MeshBasicMaterial({color:c,transparent:true,opacity:1});
+    const m=new H.Mesh(sparkGeo,mat);
+    m.position.copy(pos);
+    const dir=new H.Vector3((Math.random()-.5)*2,(Math.random()-.5)*2+.5,(Math.random()-.5)*2).normalize();
+    const spd=speed||.15;
+    scene.add(m);
+    particles.push({mesh:m,vel:dir.multiplyScalar(spd*(0.5+Math.random())),life:life||1,maxLife:life||1,gravity:-.003});
+  }
+}
+
+function spawnBeam(from,to,color,width,life){
+  const dir=new H.Vector3().subVectors(to,from);
+  const len=dir.length();
+  const geo=new H.CylinderGeometry(width||.03,width||.03,len,6);
+  geo.rotateX(Math.PI/2);
+  const mat=new H.MeshBasicMaterial({color,transparent:true,opacity:.8});
+  const m=new H.Mesh(geo,mat);
+  m.position.copy(from).add(dir.multiplyScalar(.5));
+  m.lookAt(to);
+  scene.add(m);
+  particles.push({mesh:m,vel:new H.Vector3(),life:life||.3,maxLife:life||.3,gravity:0,isBeam:true});
+}
+
+function spawnRing(pos,color,maxR,life){
+  const geo=new H.RingGeometry(.1,maxR||3,32);
+  const mat=new H.MeshBasicMaterial({color,transparent:true,opacity:.6,side:H.DoubleSide,blending:H.AdditiveBlending,depthWrite:false});
+  const m=new H.Mesh(geo,mat);
+  m.position.copy(pos);m.position.y+=.1;m.rotation.x=-Math.PI/2;
+  scene.add(m);
+  particles.push({mesh:m,vel:new H.Vector3(),life:life||.5,maxLife:life||.5,gravity:0,isRing:true,maxR:maxR||3});
+}
+
+// ═══════════════════════════════════════
+// §7 POWER EFFECTS
+// ═══════════════════════════════════════
+function getHitPoint(){
+  rc.setFromCamera(ndc,cam);
+  const hits=rc.intersectObjects(objs.map(o=>o.mesh).concat([gnd]));
+  return hits.length>0?{point:hits[0].point,obj:objs.find(o=>o.mesh===hits[0].object)}:null;
+}
+
+function firePower(hitInfo){
+  if(!hitInfo)return;
+  const{point,obj}=hitInfo;
+  const p=curPower;
+  const col=new H.Color(p.color);
+  energy=Math.max(0,energy-Math.max(2,p.dmg*.1));
+
+  // Power light flash
+  powerLight.color.set(col);powerLight.intensity=3;powerLight.position.copy(point);
+
+  // Check combo
+  if(prevPower&&prevPower.id!==p.id){
+    const c=COMBOS.find(c=>(c.a===prevPower.id&&c.b===p.id)||(c.b===prevPower.id&&c.a===p.id));
+    if(c){
+      discoveredCombos.add(c.name);combo++;style+=50;
+      comboName=c.name;comboDesc=c.desc;comboTimer=120;
+      const cCol=new H.Color(c.color);
+      spawnParticles(point,60,c.color,.25,1.5);spawnRing(point,cCol,6,1);
+      sfxBoom();sfxBlast();camSh=1.5;
+      // Combo damage
+      if(obj&&!obj.dead){obj.hp-=c.dmg;obj.dmgFlash=15;hits++;style+=c.dmg}
+      showAction(c.name+'!');
+      document.getElementById('tCombo').textContent='COMBOS: '+discoveredCombos.size;
+    }
+  }
+  prevPower=p;
+
+  // Category-specific effects
+  const cat=p.cat;
+  switch(cat){
+    case 'Energy':
+      spawnBeam(cam.position.clone(),point,col,.05,.4);
+      spawnParticles(point,30,p.color,.2,1);spawnRing(point,col,2,.5);
+      sfxZap();
+      if(obj&&!obj.dead){obj.hp-=p.dmg;obj.dmgFlash=10;applyKnockback(obj,point,.15);hits++;style+=p.dmg}
+      break;
+    case 'Elemental':
+      if(p.id==='cryokinesis'){
+        spawnParticles(point,40,'#67e8f9',.12,1.5);
+        if(obj&&!obj.dead){obj.statuses.push({type:'frozen',timer:180});obj.mesh.material.emissive.set(0x67e8f9);obj.mesh.material.emissiveIntensity=.3}
+      }else if(p.id==='pyrokinesis'||p.id==='hellfire'){
+        spawnParticles(point,50,p.color,.2,1.2);
+        if(obj&&!obj.dead){obj.statuses.push({type:'burning',timer:120});obj.hp-=p.dmg;obj.dmgFlash=10;hits++;style+=p.dmg}
+      }else if(p.id==='lightning_summon'){
+        const sky=point.clone();sky.y=30;
+        spawnBeam(sky,point,0xfbbf24,.08,.5);spawnParticles(point,40,'#fbbf24',.3,1);spawnRing(point,new H.Color(0xfbbf24),4,.6);
+        sfxBoom();camSh=.8;
+        objs.forEach(o=>{if(!o.dead&&o.mesh.position.distanceTo(point)<5){o.hp-=p.dmg;o.dmgFlash=10;applyKnockback(o,point,.2);hits++;style+=10}});
+      }else{
+        spawnParticles(point,35,p.color,.18,1);spawnRing(point,col,3,.5);
+        if(obj&&!obj.dead){obj.hp-=p.dmg;obj.dmgFlash=10;hits++;style+=p.dmg}
+      }
+      sfxHit(3);
+      break;
+    case 'Kinetic':
+      if(p.mode==='drag')break; // handled by drag system
+      spawnRing(point,col,5,.6);spawnParticles(point,40,p.color,.25,1);
+      sfxBoom();camSh=.6;
+      objs.forEach(o=>{if(!o.dead){const d=o.mesh.position.distanceTo(point);if(d<6){o.hp-=p.dmg*(1-d/6);o.dmgFlash=10;applyKnockback(o,point,.3*(1-d/6));hits++;style+=15}}});
+      break;
+    case 'Physical':
+      if(p.id==='claws'||p.id==='martial_arts'){
+        // Slash lines
+        for(let i=0;i<3;i++){
+          const off=new H.Vector3((Math.random()-.5)*1.5,(Math.random()-.5)*1.5,(Math.random()-.5)*1.5);
+          const a=point.clone().add(off),b=point.clone().sub(off);
+          spawnBeam(a,b,col,.02,.3);
+        }
+        spawnParticles(point,20,p.color,.15,.8);sfxZap();
+      }else if(p.id==='hulk_smash'){
+        spawnRing(point,col,7,.8);spawnParticles(point,60,'#22c55e',.3,1.2);sfxBoom();camSh=1.2;
+        objs.forEach(o=>{if(!o.dead){const d=o.mesh.position.distanceTo(point);if(d<8){o.hp-=p.dmg*(1-d/8);o.dmgFlash=10;applyKnockback(o,point,.4*(1-d/8));hits++;style+=20}}});
+      }else if(p.id==='web_shot'){
+        for(let i=0;i<5;i++){const off=new H.Vector3((Math.random()-.5)*3,Math.random()*2,(Math.random()-.5)*3);spawnBeam(point,point.clone().add(off),0xe5e7eb,.015,.6)}
+        if(obj&&!obj.dead){obj.statuses.push({type:'webbed',timer:200});obj.vel.multiplyScalar(.1)}
+      }else{
+        spawnParticles(point,30,p.color,.2,1);sfxHit(4);
+      }
+      if(obj&&!obj.dead){obj.hp-=p.dmg;obj.dmgFlash=10;hits++;style+=p.dmg}
+      break;
+    case 'Psychic':
+      if(p.id==='phoenix'){
+        phoenixLevel=Math.min(5,phoenixLevel+1);
+        const mult=phoenixLevel;
+        spawnParticles(point,30*mult,'#f59e0b',.15*mult,1+mult*.2);
+        spawnRing(point,new H.Color(0xf59e0b),2+mult,0.5+mult*.1);
+        if(obj&&!obj.dead){obj.hp-=p.dmg*mult;obj.dmgFlash=10;hits++;style+=p.dmg*mult}
+        sfxBlast();camSh=.3*mult;showAction('PHOENIX LV'+mult);
+      }else{
+        spawnParticles(point,25,p.color,.15,1);
+        if(p.id==='psi_blade'){for(let i=0;i<2;i++){const off=new H.Vector3((Math.random()-.5)*2,Math.random()*1.5,0);spawnBeam(point.clone().add(off),point.clone().sub(off),col,.03,.3)}}
+        if(obj&&!obj.dead){obj.hp-=p.dmg;obj.dmgFlash=10;hits++;style+=p.dmg}
+      }
+      sfxHit(2);
+      break;
+    case 'Spatial':
+      if(p.id==='teleport'){
+        spawnParticles(point,50,'#6366f1',.1,1.5);
+        sfx(600,.2,.1,'square');
+        if(obj&&!obj.dead){
+          const newPos=new H.Vector3((Math.random()-.5)*15,GND+2,(Math.random()-.5)*15);
+          spawnParticles(obj.mesh.position.clone(),20,'#6366f1',.08,1);
+          obj.mesh.position.copy(newPos);spawnParticles(newPos,20,'#6366f1',.08,1);
+          obj.hp-=p.dmg;hits++;style+=20;
+        }
+        showAction('BAMF!');
+      }else if(p.id==='gravity'){
+        spawnRing(point,col,5,.8);
+        objs.forEach(o=>{if(!o.dead){const d=o.mesh.position.distanceTo(point);if(d<7&&d>.5){const dir=_v1.subVectors(point,o.mesh.position).normalize();o.vel.add(dir.multiplyScalar(.05))}}});
+        sfx(60,.5,.15);
+      }else if(p.id==='blink_slash'){
+        for(let i=0;i<4;i++){
+          const a=point.clone().add(new H.Vector3((Math.random()-.5)*3,Math.random()*2,(Math.random()-.5)*3));
+          spawnBeam(a,point,col,.03,.25);spawnParticles(a,5,'#ec4899',.1,.5);
+        }
+        if(obj&&!obj.dead){obj.hp-=p.dmg;obj.dmgFlash=10;hits++;style+=p.dmg}
+        sfxZap();
+      }else{
+        spawnParticles(point,30,p.color,.15,1);
+        if(obj&&!obj.dead){obj.hp-=p.dmg;obj.dmgFlash=10;hits++;style+=p.dmg}
+      }
+      break;
+    case 'Mystic':
+      if(p.id==='mystic_shield'){
+        const geo=new H.TorusGeometry(1.5,.05,8,32);
+        const mat=new H.MeshBasicMaterial({color:0xf59e0b,transparent:true,opacity:.6,blending:H.AdditiveBlending});
+        const ring=new H.Mesh(geo,mat);ring.position.copy(point);ring.lookAt(cam.position);scene.add(ring);
+        particles.push({mesh:ring,vel:new H.Vector3(),life:2,maxLife:2,gravity:0,isShield:true});
+        // Inner mandala lines
+        for(let i=0;i<6;i++){
+          const a=i/6*Math.PI*2,r=1.3;
+          const from=point.clone().add(new H.Vector3(Math.cos(a)*r,Math.sin(a)*r,0));
+          const to=point.clone().add(new H.Vector3(Math.cos(a+Math.PI)*r,Math.sin(a+Math.PI)*r,0));
+          spawnBeam(from,to,0xf59e0b,.01,.8);
+        }
+      }else if(p.id==='chaos_magic'){
+        spawnParticles(point,50,'#dc2626',.2,1.5);
+        objs.forEach(o=>{if(!o.dead&&o.mesh.position.distanceTo(point)<6){
+          o.vel.set((Math.random()-.5)*.3,(Math.random())*0.3,(Math.random()-.5)*.3);
+          o.angV.set((Math.random()-.5)*.1,(Math.random()-.5)*.1,(Math.random()-.5)*.1);
+          o.hp-=p.dmg;o.dmgFlash=10;hits++;style+=15;
+        }});
+        sfxBoom();camSh=.5;
+      }else{
+        spawnParticles(point,35,p.color,.18,1.2);spawnBeam(cam.position.clone(),point,col,.04,.4);
+        if(obj&&!obj.dead){obj.hp-=p.dmg;obj.dmgFlash=10;hits++;style+=p.dmg}
+      }
+      sfxHit(3);
+      break;
+    case 'Cosmic':
+      if(p.id==='infinity_snap'){
+        sfxBoom();camSh=2;showAction('SNAP!');
+        spawnRing(point,new H.Color(0xc084fc),15,1.5);
+        objs.forEach(o=>{if(!o.dead&&Math.random()<.5){o.hp=0;o.dmgFlash=20;spawnParticles(o.mesh.position.clone(),30,'#c084fc',.15,1);hits++;style+=100}});
+      }else if(p.id==='celestial_beam'){
+        const sky=point.clone();sky.y=40;
+        spawnBeam(sky,point,0xfde68a,.15,.8);spawnParticles(point,60,'#fde68a',.3,1.5);spawnRing(point,new H.Color(0xfde68a),8,1);
+        sfxBoom();sfxBlast();camSh=1.5;
+        objs.forEach(o=>{if(!o.dead){const d=o.mesh.position.distanceTo(point);if(d<8){o.hp-=p.dmg*(1-d/8);o.dmgFlash=15;applyKnockback(o,point,.5);hits++;style+=30}}});
+      }else{
+        spawnParticles(point,40,p.color,.2,1.2);spawnRing(point,col,4,.6);
+        if(obj&&!obj.dead){obj.hp-=p.dmg;obj.dmgFlash=10;applyKnockback(obj,point,.2);hits++;style+=p.dmg}
+        sfxBlast();camSh=.4;
+      }
+      break;
+    case 'Tech':
+      spawnBeam(cam.position.clone(),point,col,.04,.35);spawnParticles(point,25,p.color,.15,.8);
+      if(p.id==='batarang'){
+        // Bouncing projectile effect
+        for(let i=0;i<3;i++){
+          const tgt=objs.filter(o=>!o.dead&&o.mesh.position.distanceTo(point)<8)[i];
+          if(tgt){spawnBeam(point,tgt.mesh.position.clone(),0x6b7280,.02,.4);tgt.hp-=p.dmg*.5;tgt.dmgFlash=8;hits++;style+=10}
+        }
+      }
+      if(obj&&!obj.dead){obj.hp-=p.dmg;obj.dmgFlash=10;hits++;style+=p.dmg}
+      sfxZap();
+      break;
+    case 'Dark':
+      spawnParticles(point,35,p.color,.12,1.5);
+      if(p.id==='void_touch'){
+        spawnRing(point,col,3,.6);
+        if(obj&&!obj.dead){obj.hp-=p.dmg;obj.dmgFlash=15;
+          // Dissolve effect
+          spawnParticles(obj.mesh.position.clone(),40,'#fbbf24',.1,2);}
+      }else if(p.id==='shadow_form'){
+        // Dark zone
+        const geo=new H.SphereGeometry(3,16,16);
+        const mat=new H.MeshBasicMaterial({color:0x1e1b4b,transparent:true,opacity:.3,blending:H.AdditiveBlending});
+        const zone=new H.Mesh(geo,mat);zone.position.copy(point);scene.add(zone);
+        particles.push({mesh:zone,vel:new H.Vector3(),life:3,maxLife:3,gravity:0,isDarkZone:true,pos:point.clone()});
+      }
+      if(obj&&!obj.dead){obj.hp-=p.dmg;obj.dmgFlash=10;hits++;style+=p.dmg}
+      sfxHit(2);
+      break;
+  }
+}
+
+function applyKnockback(obj,from,force){
+  const dir=_v1.subVectors(obj.mesh.position,from).normalize();
+  obj.vel.add(dir.multiplyScalar(force));obj.vel.y+=force*.5;
+}
+
+function showAction(text){
+  actionText=text;actionTimer=60;
+  const el=document.getElementById('AT');el.textContent=text;el.style.left='50%';el.style.top='40%';el.classList.add('show');
+}
+
+// ═══════════════════════════════════════
+// §8 UI SETUP
+// ═══════════════════════════════════════
+function buildUI(){
+  // Category tabs
+  const catsEl=document.getElementById('CATS');
+  CATEGORIES.forEach((cat,i)=>{
+    const d=document.createElement('div');d.className='cat'+(cat===curCat?' on':'');
+    d.innerHTML=`<span class="ic">${CAT_ICONS[cat]}</span>${cat.toUpperCase()}`;
+    d.style.setProperty('--bc',CAT_COLORS[cat]);
+    const rgb=new H.Color(CAT_COLORS[cat]);
+    d.style.setProperty('--r',Math.floor(rgb.r*255));d.style.setProperty('--g2',Math.floor(rgb.g*255));d.style.setProperty('--b2',Math.floor(rgb.b*255));
+    d.dataset.cat=cat;
+    d.onclick=()=>selectCat(cat);
+    catsEl.appendChild(d);
+  });
+  buildPowerList();
+}
+
+function selectCat(cat){
+  curCat=cat;
+  document.querySelectorAll('.cat').forEach(c=>c.classList.toggle('on',c.dataset.cat===cat));
+  buildPowerList();
+  const first=POWERS.filter(p=>p.cat===cat)[0];
+  if(first)selectPower(first);
+}
+
+function buildPowerList(){
+  const el=document.getElementById('PSEL');el.innerHTML='';
+  POWERS.filter(p=>p.cat===curCat).forEach(p=>{
+    const d=document.createElement('div');d.className='pbtn'+(p.id===curPower.id?' on':'');
+    d.innerHTML=`<div class="pn">${p.icon} ${p.name}</div><div class="pc">${p.char} · ${p.dmg} DMG</div>`;
+    d.style.setProperty('--pc',p.color);
+    d.onclick=()=>selectPower(p);
+    el.appendChild(d);
+  });
+}
+
+function selectPower(p){
+  curPower=p;
+  document.querySelectorAll('.pbtn').forEach(b=>b.classList.remove('on'));
+  document.querySelectorAll('.pbtn').forEach((b,i)=>{
+    const powers=POWERS.filter(pw=>pw.cat===curCat);
+    if(powers[i]&&powers[i].id===p.id)b.classList.add('on');
+  });
+  document.getElementById('tP').textContent='POWER: '+p.name.toUpperCase();
+  document.getElementById('tC').textContent='CHAR: '+p.char.toUpperCase();
+  document.getElementById('tCat').textContent='CAT: '+p.cat.toUpperCase();
+  document.getElementById('tD').textContent='DMG: '+p.dmg;
+  document.getElementById('tM').textContent='MODE: '+p.mode.toUpperCase();
+  // Update power bar color
+  document.getElementById('PF').style.background=p.color;
+}
+
+buildUI();
+selectPower(POWERS[0]);
+
+// ═══════════════════════════════════════
+// §9 INPUT
+// ═══════════════════════════════════════
+const canvas=ren.domElement;
+
+canvas.addEventListener('mousemove',e=>{
+  mouse.x=e.clientX;mouse.y=e.clientY;
+  ndc.x=(e.clientX/innerWidth)*2-1;ndc.y=-(e.clientY/innerHeight)*2+1;
+  if(e.buttons===2){
+    camTheta-=e.movementX*.005;camPhi=Math.max(.15,Math.min(Math.PI*.49,camPhi-e.movementY*.005));
+  }
+  if(dragging){
+    rc.setFromCamera(ndc,cam);
+    const pt=new H.Vector3();
+    rc.ray.intersectPlane(dragPlane,pt);
+    if(pt)dragging.mesh.position.copy(pt);
+  }
+});
+
+canvas.addEventListener('mousedown',e=>{
+  if(e.button===2)return;
+  isDown=true;holdStart=performance.now();
+  // Check if clicking an object for drag powers
+  if(curPower.mode==='drag'){
+    const hit=getHitPoint();
+    if(hit&&hit.obj){
+      dragging=hit.obj;dragging.held=true;
+      dragPlane.setFromNormalAndCoplanarPoint(new H.Vector3(0,1,0),hit.obj.mesh.position);
+      selected=hit.obj;updateSelInfo();
+      return;
+    }
+  }
+  // Fire power
+  const hit=getHitPoint();
+  if(hit)firePower(hit);
+});
+
+canvas.addEventListener('mouseup',e=>{
+  if(e.button===2)return;
+  isDown=false;
+  if(dragging){
+    // Calculate throw velocity from hold time
+    const throwForce=Math.min((performance.now()-holdStart)/500,.5);
+    const dir=new H.Vector3();cam.getWorldDirection(dir);
+    dragging.vel.copy(dir.multiplyScalar(throwForce));
+    dragging.held=false;dragging=null;
+  }
+  if(curPower.mode==='hold'){
+    const dur=(performance.now()-holdStart)/1000;
+    const hit=getHitPoint();
+    if(hit){
+      pow=Math.min(dur/2,1);
+      firePower(hit);
+    }
+  }
+  pow=0;
+});
+
+canvas.addEventListener('wheel',e=>{
+  camDist=Math.max(8,Math.min(60,camDist+e.deltaY*.02));
+},{passive:true});
+
+canvas.addEventListener('contextmenu',e=>e.preventDefault());
+
+// Keyboard
+document.addEventListener('keydown',e=>{
+  const n=parseInt(e.key);
+  if(n>=1&&n<=9){selectCat(CATEGORIES[n-1]);return}
+  if(e.key==='0'){selectCat(CATEGORIES[9]);return}
+  if(e.key==='r'||e.key==='R'){
+    // Reset objects
+    objs.forEach(o=>{scene.remove(o.mesh)});objs.length=0;spawnObjects();
+    energy=100;hits=0;style=0;phoenixLevel=1;
+  }
+  if(e.key==='h'||e.key==='H'){
+    const hi=document.getElementById('HI');hi.classList.toggle('gone');
+  }
+});
+
+// ═══════════════════════════════════════
+// §10 GAME LOOP
+// ═══════════════════════════════════════
+function updateCamera(){
+  const x=camDist*Math.sin(camPhi)*Math.sin(camTheta);
+  const y=camDist*Math.cos(camPhi);
+  const z=camDist*Math.sin(camPhi)*Math.cos(camTheta);
+  cam.position.set(camTgt.x+x,camTgt.y+y,camTgt.z+z);
+  // Camera shake
+  if(camSh>.01){cam.position.x+=(Math.random()-.5)*camSh;cam.position.y+=(Math.random()-.5)*camSh;camSh*=.9}
+  cam.lookAt(camTgt);
+}
+
+function updateObjects(){
+  for(let i=objs.length-1;i>=0;i--){
+    const o=objs[i];
+    if(o.dead){
+      if(o.mesh.material.opacity!==undefined){
+        o.mesh.material.opacity-=.02;
+        if(o.mesh.material.opacity<=0){scene.remove(o.mesh);objs.splice(i,1)}
+      }else{scene.remove(o.mesh);objs.splice(i,1)}
+      continue;
+    }
+    // Check death
+    if(o.hp<=0){
+      o.dead=true;
+      if(o.matType==='explosive'){
+        // Explode!
+        spawnParticles(o.mesh.position.clone(),50,'#ff4400',.3,1.2);
+        spawnRing(o.mesh.position.clone(),new H.Color(0xff4400),5,.6);
+        sfxBoom();camSh=.8;
+        objs.forEach(other=>{if(other!==o&&!other.dead){
+          const d=other.mesh.position.distanceTo(o.mesh.position);
+          if(d<5){other.hp-=40*(1-d/5);other.dmgFlash=10;applyKnockback(other,o.mesh.position,.3)}
+        }});
+      }
+      if(o.mesh.material){o.mesh.material.transparent=true;o.mesh.material.opacity=1}
+      continue;
+    }
+    if(o.held)continue;
+    // Physics
+    o.vel.y-=.004; // gravity
+    o.mesh.position.add(o.vel);
+    o.mesh.rotation.x+=o.angV.x;o.mesh.rotation.y+=o.angV.y;o.mesh.rotation.z+=o.angV.z;
+    // Ground collision
+    if(o.mesh.position.y<GND+.5){
+      o.mesh.position.y=GND+.5;
+      o.vel.y=Math.abs(o.vel.y)*.2;
+      o.vel.x*=.95;o.vel.z*=.95;
+      o.angV.multiplyScalar(.95);
+    }
+    // Bounds
+    if(Math.abs(o.mesh.position.x)>40)o.vel.x*=-.5;
+    if(Math.abs(o.mesh.position.z)>30)o.vel.z*=-.5;
+    // Damping
+    o.vel.multiplyScalar(.99);
+    // Damage flash
+    if(o.dmgFlash>0){
+      o.dmgFlash--;
+      const flash=o.dmgFlash/15;
+      if(o.mesh.material.emissive){
+        o.mesh.material.emissive.setRGB(flash,flash*.2,flash*.2);
+        o.mesh.material.emissiveIntensity=flash;
+      }
+    }
+    // Status effects
+    for(let s=o.statuses.length-1;s>=0;s--){
+      const st=o.statuses[s];st.timer--;
+      if(st.timer<=0){o.statuses.splice(s,1);continue}
+      if(st.type==='burning'){o.hp-=.1;if(Math.random()<.1)spawnParticles(o.mesh.position.clone(),2,'#ff6600',.05,.5)}
+      if(st.type==='frozen'){o.vel.multiplyScalar(.9);o.angV.multiplyScalar(.9)}
+      if(st.type==='webbed'){o.vel.multiplyScalar(.95)}
+    }
+  }
+}
+
+function updateParticles(){
+  for(let i=particles.length-1;i>=0;i--){
+    const p=particles[i];p.life-=1/60;
+    if(p.life<=0){scene.remove(p.mesh);particles.splice(i,1);continue}
+    const t=p.life/p.maxLife;
+    p.mesh.position.add(p.vel);
+    if(p.gravity)p.vel.y+=p.gravity;
+    if(p.isBeam||p.isShield||p.isDarkZone){
+      p.mesh.material.opacity=t;
+    }else if(p.isRing){
+      const scale=1+(1-t)*2;p.mesh.scale.set(scale,scale,scale);p.mesh.material.opacity=t*.6;
+    }else{
+      p.mesh.material.opacity=t;
+      const s=t*.5+.5;p.mesh.scale.set(s,s,s);
+    }
+    // Dark zone damage
+    if(p.isDarkZone){
+      objs.forEach(o=>{if(!o.dead&&o.mesh.position.distanceTo(p.pos)<3){o.hp-=.2}});
+    }
+  }
+}
+
+function updateHUD(){
+  // FPS
+  fc++;const now=performance.now();
+  if(now-fT>500){fps=Math.round(fc/((now-fT)/1000));fc=0;fT=now;document.getElementById('FPS').textContent=fps+' FPS'}
+
+  document.getElementById('OBJS').textContent='OBJ: '+objs.filter(o=>!o.dead).length;
+  document.getElementById('tE').textContent='ENERGY: '+Math.round(energy)+'%';
+  document.getElementById('tH').textContent='HITS: '+hits;
+  document.getElementById('tS').textContent='STYLE: '+style;
+
+  // Power bar
+  if(isDown&&curPower.mode==='hold'){
+    pow=Math.min((performance.now()-holdStart)/2000,1);
+  }else{pow*=.9}
+  document.getElementById('PF').style.width=(pow*100)+'%';
+  document.getElementById('PV').textContent=Math.round(pow*100)+'%';
+
+  // Energy regen
+  energy=Math.min(100,energy+.03);
+
+  // Power light fade
+  if(powerLight.intensity>0)powerLight.intensity*=.95;
+
+  // Combo flash
+  if(comboTimer>0){
+    comboTimer--;
+    const cf=document.getElementById('CF');
+    if(comboTimer>100){cf.classList.add('show');document.getElementById('CFN').textContent=comboName;document.getElementById('CFD').textContent=comboDesc}
+    else cf.classList.remove('show');
+  }
+  // Action text
+  if(actionTimer>0){actionTimer--;if(actionTimer<=0)document.getElementById('AT').classList.remove('show')}
+
+  // Style decay
+  if(style>0)style=Math.max(0,style-.05);
+}
+
+function updateSelInfo(){
+  const el=document.getElementById('SI');
+  if(selected&&!selected.dead){
+    el.classList.add('show');
+    document.getElementById('SN').textContent=selected.name;
+    const hpPct=Math.round(selected.hp/selected.maxHp*100);
+    const sts=selected.statuses.map(s=>s.type).join(', ')||'none';
+    document.getElementById('SD').textContent=`HP: ${Math.round(selected.hp)}/${selected.maxHp} (${hpPct}%)\nMATERIAL: ${selected.matType.toUpperCase()}\nSTATUS: ${sts}`;
+  }else{el.classList.remove('show');selected=null}
+}
+
+function animate(){
+  requestAnimationFrame(animate);
+  updateCamera();
+  updateObjects();
+  updateParticles();
+  updateHUD();
+  updateSelInfo();
+  ren.render(scene,cam);
+}
+
+// Resize
+window.addEventListener('resize',()=>{
+  cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix();
+  ren.setSize(innerWidth,innerHeight);
+});
+
+// Start
+setTimeout(()=>{document.getElementById('LD').classList.add('go')},2200);
+animate();
+
+// Hide hint after 8s
+setTimeout(()=>{document.getElementById('HI').classList.add('gone')},8000);
+
+})();
+</script>
+</body>
+</html>
